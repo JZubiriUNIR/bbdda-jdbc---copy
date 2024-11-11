@@ -124,7 +124,7 @@ public class MySqlApplication {
 
             // Comprobamos si el empleado existe
             PreparedStatement selectStatement = connection.prepareStatement(selectSql);
-            selectStatement.setInt(1, employee.getEmployeeId()); // Código del empleado
+            selectStatement.setInt(1, employee.getEmpNo()); // Código del empleado
             ResultSet resultSet = selectStatement.executeQuery();
             resultSet.next(); // Nos movemos a la primera fila
             int rowCount = resultSet.getInt(1);
@@ -182,7 +182,7 @@ public class MySqlApplication {
      * @throws SQLException - Error al rellenar los parámetros
      */
     private static void fillInsertStatement(PreparedStatement statement, MySqlEmployee employee) throws SQLException {
-        statement.setInt(1, employee.getEmployeeId());
+        statement.setInt(1, employee.getEmpNo());
         statement.setString(2, employee.getFirstName());
         statement.setString(3, employee.getLastName());
         statement.setString(4, employee.getGender());
@@ -204,7 +204,7 @@ public class MySqlApplication {
         statement.setString(3, employee.getGender());
         statement.setDate(4, employee.getHireDate());
         statement.setDate(5, employee.getBirthDate());
-        statement.setInt(6, employee.getEmployeeId());
+        statement.setInt(6, employee.getEmpNo());
     }
 
     /**

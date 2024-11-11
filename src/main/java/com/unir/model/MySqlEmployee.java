@@ -7,7 +7,7 @@ import java.sql.Date;
 @AllArgsConstructor
 @Getter
 public class MySqlEmployee {
-    private int employeeId;
+    private int empNo;
     private String firstName;
     private String lastName;
     private String gender;

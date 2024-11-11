@@ -18,56 +18,68 @@ public class OracleApplication {
 
             log.debug("Conexión establecida con la base de datos Oracle");
 
-            selectAllEmployees(connection);
-            selectAllCountriesAsXml(connection);
+            selectAllEmployeesWithDepartment(connection);
+            selectAllManagers(connection);
 
         } catch (Exception e) {
             log.error("Error al tratar con la base de datos", e);
         }
     }
 
-    /**
-     * Ejemplo de consulta a la base de datos usando Statement.
-     * Statement es la forma más básica de ejecutar consultas a la base de datos.
-     * Es la más insegura, ya que no se protege de ataques de inyección SQL.
-     * No obstante, es útil para sentencias DDL.
-     * @param connection
-     * @throws SQLException
+    /*
+    Mostrar el nombre y apellido de un empleado junto con el nombre de su departamento.
      */
-    private static void selectAllEmployees(Connection connection) throws SQLException {
+    private static void selectAllEmployeesWithDepartment(Connection connection) throws SQLException {
         Statement selectEmployees = connection.createStatement();
-        ResultSet employees = selectEmployees.executeQuery("select * from EMPLOYEES");
-
+        ResultSet employees = selectEmployees.executeQuery("Select Xmlelement(\"empleados\",\n" +
+                "       XMLATTRIBUTES (\n" +
+                "           FIRST_NAME as \"nombre\",\n" +
+                "           LAST_NAME as \"apellidos\",\n" +
+                "           DEPARTMENT_NAME as \"departamento\"\n" +
+                "       ))\n" +
+                "as empleados\n" +
+                "From EMPLOYEES\n" +
+                "    inner join DEPARTMENTS on EMPLOYEES.DEPARTMENT_ID = DEPARTMENTS.DEPARTMENT_ID");
+        log.info("Nombres de empleados con su departamento en XML");
         while (employees.next()) {
-            log.debug("Employee: {} {}",
-                    employees.getString("FIRST_NAME"),
-                    employees.getString("LAST_NAME"));
+            log.debug("{}",
+                    employees.getString("empleados"));
         }
     }
 
-    /**
-     * Ejemplo de consulta a la base de datos usando PreparedStatement y SQL/XML.
-     * Para usar SQL/XML, es necesario que la base de datos tenga instalado el módulo XDB.
-     * En Oracle 19c, XDB viene instalado por defecto.
-     * Ademas, se necesitan las dependencias que se encuentran en el pom.xml.
-     * @param connection
-     * @throws SQLException
+    /*
+    Mostrar el nombre, apellido, nombre de departamento, ciudad y pais de los empleados que son Managers.
      */
-    private static void selectAllCountriesAsXml(Connection connection) throws SQLException {
-        PreparedStatement selectCountries = connection.prepareStatement("SELECT\n" +
-                "  XMLELEMENT(\"countryXml\",\n" +
-                "       XMLATTRIBUTES(\n" +
-                "         c.country_name AS \"name\",\n" +
-                "         c.region_id AS \"code\",\n" +
-                "         c.country_id AS \"id\"))\n" +
-                "  AS CountryXml\n" +
-                "FROM  countries c\n" +
-                "WHERE c.country_name LIKE ?");
-        selectCountries.setString(1, "S%");
-
-        ResultSet countries = selectCountries.executeQuery();
-        while (countries.next()) {
-            log.debug("Country as XML: {}", countries.getString("CountryXml"));
+    private static void selectAllManagers(Connection connection) throws SQLException{
+        Statement selectManagers = connection.createStatement();
+        ResultSet managers = selectManagers.executeQuery("Select XMLELEMENT(\"managers\",\n" +
+                "            XMLAGG(\n" +
+                "                XMLELEMENT(\"manager\",\n" +
+                "                    XMLELEMENT(\"nombreCompleto\",\n" +
+                "                        XMLFOREST(\n" +
+                "                            FIRST_NAME as \"nombre\",\n" +
+                "                            LAST_NAME as \"apellido\"\n" +
+                "                        )\n" +
+                "                    ),\n" +
+                "                    XMLFOREST(\n" +
+                "                        DEPARTMENT_NAME as \"department\",\n" +
+                "                        CITY as \"city\",\n" +
+                "                        COUNTRY_NAME as \"country\"\n" +
+                "                    )\n" +
+                "                )\n" +
+                "            )\n" +
+                "       )\n" +
+                "as managers\n" +
+                "From EMPLOYEES\n" +
+                "    inner join DEPARTMENTS on EMPLOYEES.DEPARTMENT_ID = DEPARTMENTS.DEPARTMENT_ID\n" +
+                "    inner join LOCATIONS on DEPARTMENTS.LOCATION_ID = LOCATIONS.LOCATION_ID\n" +
+                "    inner join COUNTRIES on LOCATIONS.COUNTRY_ID = COUNTRIES.COUNTRY_ID\n" +
+                "    inner join JOBS on EMPLOYEES.JOB_ID = JOBS.JOB_ID\n" +
+                "Where UPPER(JOBS.JOB_TITLE) like '%MANAGER'");
+        log.info("Datos de los managers en XML");
+        while (managers.next())    {
+        log.debug("{}",
+                managers.getString("managers"));
         }
     }
 }
