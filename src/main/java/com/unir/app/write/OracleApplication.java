@@ -2,6 +2,7 @@ package com.unir.app.write;
 
 import com.unir.config.OracleDatabaseConnector;
 import com.unir.model.OracleCountry;
+import com.unir.model.OracleJobs;
 import lombok.extern.slf4j.Slf4j;
 
 import java.sql.Connection;
@@ -25,7 +26,9 @@ public class OracleApplication {
 
             log.info("Conexión establecida con la base de datos Oracle");
             OracleCountry spain = new OracleCountry("ES", 1, "Spain");
-            upsert(connection, spain);
+            upsertCountries(connection, spain);
+            OracleJobs newJob = new OracleJobs("MG_IT", "IT_Manager", 10000, 20000);
+            upsertJobs(connection, newJob);
 
         } catch (Exception e) {
             log.error("Error al tratar con la base de datos", e);
@@ -45,7 +48,7 @@ public class OracleApplication {
      * @param country - País a insertar o actualizar.
      * @throws SQLException - Si ocurre algún error al ejecutar la consulta.
      */
-    public static void upsert(Connection connection, OracleCountry country) throws SQLException {
+    public static void upsertCountries(Connection connection, OracleCountry country) throws SQLException {
 
         String selectSql = "SELECT COUNT(*) FROM countries WHERE country_id = ?";
         String updateSql = "UPDATE countries SET country_name = ?, region_id = ? WHERE country_id = ?";
@@ -70,6 +73,36 @@ public class OracleApplication {
             insertStatement.setString(1, country.getCountryId()); // Nuevo código del país.
             insertStatement.setString(2, country.getCountryName()); // Nuevo nombre del país
             insertStatement.setInt(3, country.getRegionId()); // Código de región
+            int filasInsertadas = insertStatement.executeUpdate();
+            log.debug("Filas Insertadas: {}", filasInsertadas);
+        }
+    }
+    public static void upsertJobs(Connection connection, OracleJobs jobs) throws SQLException {
+        String selectSql = "SELECT COUNT(*) FROM jobs WHERE job_id = ?";
+        String updateSql = "UPDATE jobs SET job_title = ?, min_salary = ?, max_salary = ? WHERE job_id = ?";
+        String insertSql = "INSERT INTO jobs (job_id, job_title, min_salary, max_salary) VALUES (?, ?, ?, ?)";
+
+        PreparedStatement selectStatement = connection.prepareStatement(selectSql);
+        selectStatement.setString(1, jobs.getJob_id()); //Código del trabajo
+        ResultSet resultSet = selectStatement.executeQuery();
+        resultSet.next(); //Nos movemos a la primera fila
+        int rowCount = resultSet.getInt(1);
+
+        if (rowCount > 0) {
+            PreparedStatement updateStatement = connection.prepareStatement(updateSql);
+            updateStatement.setString(1, jobs.getJob_id()); //Código del trabajo
+            updateStatement.setString(2, jobs.getJob_title()); //Nuevo título del trabajo
+            updateStatement.setInt(3, jobs.getMin_salary()); //Nuevo salario mínimo
+            updateStatement.setInt(4, jobs.getMax_salary()); //Nuevo salario máximo
+
+            int filasActualizadas = updateStatement.executeUpdate();
+            log.debug("Filas Actualizadas: {}", filasActualizadas);
+        } else {
+            PreparedStatement insertStatement = connection.prepareStatement(insertSql);
+            insertStatement.setString(1, jobs.getJob_id()); //Nuevo código del trabajo
+            insertStatement.setString(2, jobs.getJob_title()); //Nuevo título del trabajo
+            insertStatement.setInt(3, jobs.getMin_salary()); //Nuevo salario mínimo
+            insertStatement.setInt(4, jobs.getMax_salary()); //Nuevo salario máximo
             int filasInsertadas = insertStatement.executeUpdate();
             log.debug("Filas Insertadas: {}", filasInsertadas);
         }
