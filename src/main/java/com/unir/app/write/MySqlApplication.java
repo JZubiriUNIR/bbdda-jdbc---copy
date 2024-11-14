@@ -5,6 +5,8 @@ import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
 import com.opencsv.exceptions.CsvValidationException;
 import com.unir.config.MySqlConnector;
+import com.unir.model.MySQLDeptEmp;
+import com.unir.model.MySqlDepartments;
 import com.unir.model.MySqlEmployee;
 import lombok.extern.slf4j.Slf4j;
 import java.io.FileReader;
@@ -35,10 +37,12 @@ public class MySqlApplication {
             log.info("Conexión establecida con la base de datos MySQL");
 
             // Leemos los datos del fichero CSV
-            List<MySqlEmployee> employees = readData();
+            List<MySqlEmployee> employees = readEmployee();
+            List<MySqlDepartments> departments = readDepartment();
+            List<MySQLDeptEmp> deptEmps = readDeptEmp();
 
             // Introducimos los datos en la base de datos
-            intake(connection, employees);
+            //intake(connection, employees);
 
         } catch (Exception e) {
             log.error("Error al tratar con la base de datos", e);
@@ -51,12 +55,12 @@ public class MySqlApplication {
      *
      * @return - Lista de empleados
      */
-    private static List<MySqlEmployee> readData() {
+    private static List<MySqlEmployee> readEmployee() {
 
         // Try-with-resources. Se cierra el reader automáticamente al salir del bloque try
         // CSVReader nos permite leer el fichero CSV linea a linea
         try (CSVReader reader = new CSVReaderBuilder(
-                new FileReader("unirEmployees.csv"))
+                new FileReader("nuevosEmpleados.csv"))
                 .withCSVParser(
                         new CSVParserBuilder()
                                 .withSeparator(',')
@@ -94,6 +98,76 @@ public class MySqlApplication {
         }
     }
 
+    private static List<MySqlDepartments> readDepartment() {
+
+        // Try-with-resources. Se cierra el reader automáticamente al salir del bloque try
+        // CSVReader nos permite leer el fichero CSV linea a linea
+        try (CSVReader reader = new CSVReaderBuilder(
+                new FileReader("nuevosDepartamentos.csv"))
+                .withCSVParser(
+                        new CSVParserBuilder()
+                                .withSeparator(',')
+                                .build())
+                .build()) {
+
+            // Creamos la lista de departamentos
+            List<MySqlDepartments> departments = new LinkedList<>();
+
+            // Saltamos la primera linea, que contiene los nombres de las columnas del CSV
+            reader.skip(1);
+            String[] nextLine;
+
+            // Leemos el fichero linea a linea
+            while((nextLine = reader.readNext()) != null) {
+
+                // Creamos el departamento y lo añadimos a la lista
+                MySqlDepartments department = new MySqlDepartments(
+                        nextLine[0],
+                        nextLine[1]
+                );
+                departments.add(department);
+            }
+            return departments;
+        } catch (IOException e) {
+            log.error("Error al leer el fichero CSV", e);
+            throw new RuntimeException(e);
+        } catch (CsvValidationException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static List<MySQLDeptEmp> readDeptEmp(){
+        try(CSVReader reader = new CSVReaderBuilder(
+                new FileReader("empleadosDepartamentos.csv"))
+                .withCSVParser(
+                        new CSVParserBuilder()
+                                .withSeparator(',')
+                                .build())
+                .build()){
+
+            List<MySQLDeptEmp> deptEmps = new LinkedList<>();
+            SimpleDateFormat format = new SimpleDateFormat("yyy-MM-dd");
+
+            reader.skip(1);
+            String[] nextLine;
+
+            while((nextLine = reader.readNext()) != null){
+                MySQLDeptEmp deptEmp = new MySQLDeptEmp(
+                        Integer.parseInt(nextLine[0]),
+                        nextLine[1],
+                        new Date(format.parse(nextLine[2]).getTime()),
+                        new Date(format.parse(nextLine[3]).getTime())
+                );
+                deptEmps.add(deptEmp);
+            }
+            return deptEmps;
+        } catch (IOException e) {
+            log.error("Error al leer el fichero CSV", e);
+            throw new RuntimeException(e);
+        } catch (CsvValidationException | ParseException e) {
+            throw new RuntimeException(e);
+        }
+    }
     /**
      * Introduce los datos en la base de datos.
      * Si el empleado ya existe, se actualiza.
